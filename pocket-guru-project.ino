@@ -1,4 +1,4 @@
-// Source https://www.makerguides.com/character-i2c-lcd-arduino-tutorial/
+// Helpful article: https://www.makerguides.com/character-i2c-lcd-arduino-tutorial/
 
 // Include the libraries:
 // LiquidCrystal_I2C.h: https://github.com/johnrickman/LiquidCrystal_I2C
@@ -15,28 +15,40 @@ const int buttonPin = 2;
 int buttonState = 0;
 int lastButtonState = 0;
 
-const int secondsUntilRefresh = 5;
+const int NORMAL_REFRESH_SEC = 10;
+const int BLAST_REFRESH_SEC = 1;
+
+int secondsUntilRefresh = NORMAL_REFRESH_SEC;
 int currentMessageIndex = 0;
 unsigned long lastRefreshMillis = 0;
+unsigned long blastStartMillis = 0;
 
 const char *messages[] = {
   "Smile, breathe,", "and go slowly.",
   "Joy favors", "the kind.",
   "Whenever you go,", "there you are.",
   "All is well.", "",
-  "You can totally", "do this."
+  "You are not", "your thoughts.",
+  "You can totally", "do this.",
+  "Stay hungry", "Stay foolish",
+  "Reach for", "the stars.",
+  "This too", "shall pass.",
+  "No feeling", "is final.",
+  "Dance lightly", "with life.",
+  "Creativity is", "like electricity",
+  "Wisdom begins", "in wonder.",
+  "You are", "your choices."
 };
 
 int totalMessages = 0;
 
 // Custom characters
-uint8_t note[8] = {0x2,0x3,0x2,0xe,0x1e,0xc,0x0};
-uint8_t bell[8] = {0x4,0xe,0xe,0xe,0x1f,0x0,0x4};
 uint8_t heart[8] = {0x0,0xa,0x1f,0x1f,0xe,0x4,0x0};
-uint8_t full[8] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f};
 
-const int SWEEP_CHAR = 2;
+const int SWEEP_CHAR = 0;
 const int SWEEP_LENGTH = 8;
+
+const int BLAST_DURATION_SEC = 8;
 
 const int SCROLLING = 0;
 const int SWEEPING = 1;
@@ -49,17 +61,14 @@ void setup() {
   lcd.init();
   lcd.backlight();
 
-  lcd.createChar(0, note);
-  lcd.createChar(1, bell);
-  lcd.createChar(2, heart);
-  lcd.createChar(3, full);
+  lcd.createChar(0, heart);
 
   // Initialize the button as an input:
   pinMode(buttonPin, INPUT_PULLUP);
 
   // The number of elements in the array is the first division.
   // Since each message is split into two elements (first line and second line),
-  // dividing by two gives us the real number of messages.
+  // dividing by two gives us the total number of messages.
   totalMessages = (sizeof(messages) / sizeof(messages[0])) / 2;
 
   lastRefreshMillis = millis();
@@ -112,7 +121,8 @@ void sweep() {
 
   lcd.clear();
 
-  state = SCROLLING;
+  blastStartMillis = millis();
+  state = BLASTING;
 }
 
 void drawClearChars(int count) {
@@ -125,7 +135,14 @@ void drawClearChars(int count) {
 }
 
 void blast() {
+  secondsUntilRefresh = BLAST_REFRESH_SEC;
+
+  scroll();
   
+  if (millis() - blastStartMillis >= BLAST_DURATION_SEC * 1000) {
+    secondsUntilRefresh = NORMAL_REFRESH_SEC;
+    state = SCROLLING;
+  }
 }
 
 void printMessage(int index) {
