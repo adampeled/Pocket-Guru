@@ -35,6 +35,15 @@ uint8_t bell[8] = {0x4,0xe,0xe,0xe,0x1f,0x0,0x4};
 uint8_t heart[8] = {0x0,0xa,0x1f,0x1f,0xe,0x4,0x0};
 uint8_t full[8] = {0x1f,0x1f,0x1f,0x1f,0x1f,0x1f,0x1f};
 
+const int SWEEP_CHAR = 2;
+const int SWEEP_LENGTH = 8;
+
+const int SCROLLING = 0;
+const int SWEEPING = 1;
+const int BLASTING = 2;
+
+int state = SCROLLING;
+
 void setup() {
   // Initialize the LCD:
   lcd.init();
@@ -59,6 +68,23 @@ void setup() {
 }
 
 void loop() {
+  if(state == SCROLLING) scroll();
+  else if(state == SWEEPING) sweep();
+  else if(state == BLASTING) blast();
+
+  // Read button input:
+  buttonState = digitalRead(buttonPin);
+  // Button was just pressed
+  if (lastButtonState == HIGH && buttonState == LOW) {
+    if(state != SWEEPING && state != BLASTING) {
+      state = SWEEPING;
+    }
+  }
+
+  lastButtonState = buttonState;
+}
+
+void scroll() {
   // If enough time has passed, show the next message
   unsigned long currentMillis = millis();
   if (currentMillis - lastRefreshMillis >= secondsUntilRefresh * 1000) {
@@ -68,24 +94,38 @@ void loop() {
   }
   
   printMessage(currentMessageIndex);
+}
 
-  // Example: Writing custom characters
-  /*lcd.setCursor(0, 0);
-  lcd.write(0);
-  lcd.setCursor(0, 1);
-  lcd.write(1);*/
-  // End of example
+void sweep() {
+  lcd.clear();
 
-  // Read button input:
-  buttonState = digitalRead(buttonPin);
-  if (lastButtonState == LOW && buttonState == HIGH) {
-    Serial.println("button up");
-  }
-  else if (lastButtonState == HIGH && buttonState == LOW) {
-    Serial.println("button down");
+  drawClearChars(SWEEP_LENGTH);
+
+  for(int i = 0; i < SWEEP_LENGTH - 2; i++) {
+    lcd.scrollDisplayLeft();
   }
 
-  lastButtonState = buttonState;
+  for(int i = 0; i < WIDTH + SWEEP_LENGTH; i++) {
+    delay(100);
+    lcd.scrollDisplayRight();
+  }
+
+  lcd.clear();
+
+  state = SCROLLING;
+}
+
+void drawClearChars(int count) {
+  for(int i = 0; i < count; i++) {
+    lcd.setCursor(i, 0);
+    lcd.write(SWEEP_CHAR);
+    lcd.setCursor(i, 1);
+    lcd.write(SWEEP_CHAR);
+  }
+}
+
+void blast() {
+  
 }
 
 void printMessage(int index) {
